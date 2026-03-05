@@ -64,7 +64,7 @@ All benchmarks measured on Apple M2 MacBook Air (8GB RAM) with a custom benchmar
 │                        GGUF Model File                          │
 │  ┌─────────┐  ┌──────────────┐  ┌─────────────────────────────┐ │
 │  │ Header  │  │   Metadata   │  │        Tensor Data          │ │
-│  │ (magic, │  │ (config,     │  │  (F16 / Q8_0 / Q4_0 /      │ │
+│  │ (magic, │  │ (config,     │  │  (F16 / Q8_0 / Q4_0 /       │ │
 │  │ version)│  │  vocab)      │  │   Q6_K weights)             │ │
 │  └─────────┘  └──────────────┘  └─────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
@@ -84,12 +84,12 @@ All benchmarks measured on Apple M2 MacBook Air (8GB RAM) with a custom benchmar
                          ▼
          ┌───────────────────────────────┐
          │         Forward Pass          │
-         │  ┌─────────┐  ┌───────────┐  │
-         │  │ RMSNorm │  │ RoPE      │  │
-         │  │         │  │           │  │
-         │  └─────────┘  └───────────┘  │
+         │  ┌─────────┐  ┌───────────┐   │
+         │  │ RMSNorm │  │ RoPE      │   │
+         │  │         │  │           │   │
+         │  └─────────┘  └───────────┘   │
          │  ┌─────────────────────────┐  │
-         │  │  Grouped Query Attention │  │
+         │  │  Grouped Query Attention│  │
          │  │  (with KV Cache)        │  │
          │  └─────────────────────────┘  │
          │  ┌─────────────────────────┐  │
