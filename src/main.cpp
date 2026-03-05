@@ -53,6 +53,19 @@
 // pos 30, layer 5:  [head0: 64 floats] [head1: 64 floats] [head2: 64 floats] [head3: 64 floats]
 // And remember, during attention, each KV head is shared by 8 query heads (32 query heads ÷ 4 KV heads = 8). So query heads 0–7 all attend against KV head 0's keys and values, query heads 8–15 against KV head 1, and so on. The 8 query heads within each group ask different questions but search through the same set of keys and values. That's the GQA tradeoff — 8× less memory in the KV cache compared to full multi-head attention, with minimal quality loss.
 
+// Returns the value after the flag, or nullptr if not found.
+// Removes the flag and value from argv.
+static const char* consume_flag(int& argc, char** argv, const char* flag) {
+    for (int i = 1; i < argc - 1; i++) {
+        if (std::strcmp(argv[i], flag) == 0) {
+            const char* val = argv[i + 1];
+            for (int j = i; j < argc - 2; j++) argv[j] = argv[j + 2];
+            argc -= 2;
+            return val;
+        }
+    }
+    return nullptr;
+}
 
 // -------------------- main --------------------
 
@@ -64,68 +77,59 @@ int main(int argc, char** argv) {
                       << "  ./engine <model.gguf> --prompt \"your question\"  (custom prompt)\n"
                       << "  ./engine <model.gguf> dump <tensor> [n]         (dump tensor)\n"
                       << "\nOptions:\n"
-                      << "  --backend naive   Use naive (unoptimized) implementations\n"
-                      << "  --backend neon    Use ARM NEON SIMD implementations (default on ARM)\n"
-                      << "  --threads N       Number of threads for matmul (default: 1)\n"
-                      << "  --prompt \"text\"   Custom prompt (auto-wrapped in chat template)\n";
+                      << "  --backend naive      Use naive (unoptimized) implementations\n"
+                      << "  --backend neon       Use ARM NEON SIMD implementations (default on ARM)\n"
+                      << "  --threads N          Number of threads for matmul (default: 1)\n"
+                      << "  --prompt \"text\"      Custom prompt (auto-wrapped in chat template)\n"
+                      << "  --temperature F      Sampling temperature, 0 = greedy (default: 0.7)\n"
+                      << "  --top_p F            Nucleus sampling threshold, 0-1 (default: 0.9)\n"
+                      << "  --max_tokens N       Maximum tokens to generate, 1-2048 (default: 2048)\n";
             return 1;
         }
 
-        // Parse --backend flag (can appear anywhere in args)
-        for (int i = 1; i < argc - 1; i++) {
-            if (std::strcmp(argv[i], "--backend") == 0) {
-                std::string val = argv[i + 1];
-                if (val == "naive") {
+
+        if (auto v = consume_flag(argc, argv, "--backend")) {
+            std::string val = v;
+            if (val == "naive") set_backend(Backend::NAIVE);
+            else if (val == "neon") {
+                #ifdef __ARM_NEON
+                    set_backend(Backend::NEON);
+                #else
+                    std::cerr << "Warning: ARM NEON not available on this platform, using naive backend.\n";
                     set_backend(Backend::NAIVE);
-                } else if (val == "neon") {
-                    #ifdef __ARM_NEON
-                        set_backend(Backend::NEON);
-                    #else
-                        std::cerr << "Warning: ARM NEON not available on this platform, using naive backend.\n";
-                        set_backend(Backend::NAIVE);
-                    #endif
-                } else {
-                    std::cerr << "Unknown backend: " << val << " (use 'naive' or 'neon')\n";
-                    return 1;
-                }
-                // Shift remaining args to remove --backend and its value
-                for (int j = i; j < argc - 2; j++) {
-                    argv[j] = argv[j + 2];
-                }
-                argc -= 2;
-                break;
+                #endif
+            } else {
+                std::cerr << "Unknown backend: " << val << " (use 'naive' or 'neon')\n";
+                return 1;
             }
         }
 
-        // Parse --threads flag (can appear anywhere in args)
-        for (int i = 1; i < argc - 1; i++) {
-            if (std::strcmp(argv[i], "--threads") == 0) {
-                int n = std::atoi(argv[i + 1]);
-                if (n < 1) n = 1;
-                set_num_threads(n);
-                // Shift remaining args to remove --threads and its value
-                for (int j = i; j < argc - 2; j++) {
-                    argv[j] = argv[j + 2];
-                }
-                argc -= 2;
-                break;
-            }
-        }
-
-        // Parse --prompt flag (can appear anywhere in args)
+        if (auto v = consume_flag(argc, argv, "--threads")) set_num_threads(std::max(1, std::atoi(v)));
         std::string user_prompt;
         bool has_prompt = false;
-        for (int i = 1; i < argc - 1; i++) {
-            if (std::strcmp(argv[i], "--prompt") == 0) {
-                user_prompt = argv[i + 1];
-                has_prompt = true;
-                for (int j = i; j < argc - 2; j++) {
-                    argv[j] = argv[j + 2];
-                }
-                argc -= 2;
-                break;
-            }
+        if (auto v = consume_flag(argc, argv, "--prompt")) { user_prompt = v; has_prompt = true; }
+        float temperature = 0.7f;
+        if (auto v = consume_flag(argc, argv, "--temperature")) temperature = std::atof(v);
+        float top_p = 0.9f;
+        if (auto v = consume_flag(argc, argv, "--top_p")) top_p = std::atof(v);
+        int max_tokens = 2048;
+        if (auto v = consume_flag(argc, argv, "--max_tokens")) max_tokens = std::atoi(v);
+
+        // Validate CLI options
+        if (temperature < 0.0f) {
+            std::cerr << "Error: --temperature must be >= 0 (got " << temperature << ")\n";
+            return 1;
         }
+        if (top_p <= 0.0f || top_p > 1.0f) {
+            std::cerr << "Error: --top_p must be in (0.0, 1.0] (got " << top_p << ")\n";
+            return 1;
+        }
+        if (max_tokens < 1 || max_tokens > 2048) {
+            std::cerr << "Error: --max_tokens must be in [1, 2048] (got " << max_tokens << ")\n";
+            return 1;
+        }
+
+
 
         // Get prompt from command line or use default
         std::string prompt;
@@ -170,7 +174,7 @@ int main(int argc, char** argv) {
         //std::cout << "\n\nPrompt: \"" << prompt << "\"\n";
         std::cout << "Generating...\n\n";
 
-        generate(model, state, prompt);
+        generate(model, state, prompt, max_tokens, temperature, top_p);
 
         return 0;
     } catch (const std::exception& e) {

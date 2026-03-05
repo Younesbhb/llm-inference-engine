@@ -199,14 +199,14 @@ make test
 
 ### CLI Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--backend naive\|neon` | Computation backend | `neon` on ARM |
-| `--threads N` | Number of threads for matmul | `1` |
-| `--prompt "text"` | Input prompt (auto-wrapped in chat template) | Default demo |
-| `--temperature F` | Sampling temperature | `0.7` |
-| `--top_p F` | Nucleus sampling threshold | `0.9` |
-| `--max_tokens N` | Maximum tokens to generate | `2048` |
+| Option | Description | Default | Range |
+|--------|-------------|---------|-------|
+| `--backend naive\|neon` | Computation backend | `neon` on ARM | — |
+| `--threads N` | Number of threads for matmul | `1` | 1+ |
+| `--prompt "text"` | Input prompt (auto-wrapped in chat template) | Default demo | — |
+| `--temperature F` | Sampling temperature (0 = greedy) | `0.7` | >= 0 |
+| `--top_p F` | Nucleus sampling threshold | `0.9` | (0, 1.0] |
+| `--max_tokens N` | Maximum tokens to generate | `2048` | [1, 2048] |
 
 ## Model Files
 
