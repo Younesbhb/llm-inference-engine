@@ -22,6 +22,16 @@ Building this requires combining disciplines usually taught separately:
 
 All benchmarks measured on Apple M2 MacBook Air (8GB RAM) with a custom benchmarking harness using median of multiple trials with warmup isolation.
 
+### Peak Configuration
+
+| Metric | Value |
+|--------|-------|
+| Best throughput | **29.4 tok/s** (Q4_0, NEON, 4 threads) |
+| Best SIMD speedup | **23.2x** (F16, NEON vs naive) |
+| Best thread scaling | **4.51x** at 8 threads (F16 naive) |
+| Best compression | **3.4x** (F16 → Q4_0, 2.2 GB → 637 MB) |
+| Combined speedup | **49x** (F16 naive 1T → Q4_0 NEON 4T) |
+
 ### NEON SIMD Speedup (1 thread)
 
 | Format | Naive (ms/tok) | NEON (ms/tok) | Speedup |
@@ -46,16 +56,6 @@ All benchmarks measured on Apple M2 MacBook Air (8GB RAM) with a custom benchmar
 | F16    | 2.2 GB    | 39     | 25.6  |
 | Q8_0   | 1.2 GB    | 41     | 24.3  |
 | Q4_0   | 637 MB    | 34     | **29.4** |
-
-### Peak Configuration
-
-| Metric | Value |
-|--------|-------|
-| Best throughput | **29.4 tok/s** (Q4_0, NEON, 4 threads) |
-| Best SIMD speedup | **23.2x** (F16, NEON vs naive) |
-| Best thread scaling | **4.51x** at 8 threads (F16 naive) |
-| Best compression | **3.4x** (F16 → Q4_0, 2.2 GB → 637 MB) |
-| Combined speedup | **49x** (F16 naive 1T → Q4_0 NEON 4T) |
 
 ## Architecture
 
