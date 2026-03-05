@@ -203,7 +203,7 @@ make test
 |--------|-------------|---------|
 | `--backend naive\|neon` | Computation backend | `neon` on ARM |
 | `--threads N` | Number of threads for matmul | `1` |
-| `--prompt "text"` | Input prompt | Chat template |
+| `--prompt "text"` | Input prompt (auto-wrapped in chat template) | Default demo |
 | `--temperature F` | Sampling temperature | `0.7` |
 | `--top_p F` | Nucleus sampling threshold | `0.9` |
 | `--max_tokens N` | Maximum tokens to generate | `2048` |
